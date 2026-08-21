@@ -1,0 +1,275 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   FONTS — self-hosted woff2. ONLY the faces/weights the v2 design actually uses
+   (audited from Figma — see DESIGN_TOKENS.md §2).
+
+   Geist Pixel is intentionally NOT loaded: it was quotes-only in v1 and the
+   Quote sections are cut. Geist Mono Regular/Bold likewise — v2 uses Medium only.
+   ========================================================================== */
+@font-face { font-family: "Manrope"; src: url("/fonts/Manrope-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Manrope"; src: url("/fonts/Manrope-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Manrope"; src: url("/fonts/Manrope-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Manrope"; src: url("/fonts/Manrope-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Manrope"; src: url("/fonts/Manrope-ExtraBold.woff2") format("woff2"); font-weight: 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("/fonts/GeistMono-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+/* ⚠️ The italic accent face is ADELLE, and it is NOT self-hosted — it loads from
+   Adobe Typekit via a <link> in `app/layout.tsx`. That is the only font on the site
+   that is a network dependency; everything above is served from `/public/fonts`.
+
+   Libre Baskerville was here until 13 Aug (self-hosted, SIL OFL, italic-400 only).
+   `/public/fonts/LibreBaskerville-Italic.woff2` is now unreferenced and can be
+   deleted. */
+
+/* ============================================================================
+   TOKEN CUSTOM PROPERTIES that need a breakpoint step (see DESIGN_TOKENS.md).
+   All other tokens live in tailwind.config.ts.
+   ========================================================================== */
+:root {
+  --space-gutter: 10px; /* page-level frame on all four sides */
+}
+/* 639.98, not 640: Tailwind's `sm` is `min-width: 640px`, so `max-width: 640px`
+   would make BOTH true at exactly 640 — the gutter would drop to 5px on a viewport
+   the rest of the layout already treats as `sm`. See RESPONSIVE_SPEC.md §2. */
+@media (max-width: 639.98px) {
+  :root { --space-gutter: 5px; }
+}
+
+/* ============================================================================
+   RESET (minimal, modern)
+   ========================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+html { -webkit-text-size-adjust: 100%; }
+
+/* Nav anchors glide instead of snapping.
+   Native rather than a JS tween on purpose: the browser runs this on the
+   compositor, it cannot fight the user mid-scroll, and it hands control straight
+   back the moment they touch the wheel — all of which a JS scroll animation has
+   to reimplement badly. The reduced-motion block at the foot of this file already
+   overrides it to `auto`. */
+html { scroll-behavior: smooth; }
+
+/* ⚠️ ONE SNAP POINT ON THE WHOLE SITE: the Services finale coming to rest fully
+   expanded, so an over-scroll does not carry you straight through it into Process.
+   The snap TARGET is a zero-height marker inside that section.
+
+   ⚠️ PROXIMITY, NEVER MANDATORY. Proximity only engages when a release lands near a
+   snap point, so with a single snap point on the page this is inert everywhere else —
+   which is what makes a document-level property acceptable for a section-level need.
+   `mandatory` would make every scroll jump to the nearest point and would fight the
+   pinned reel directly.
+
+   ⚠️ It has to be HERE rather than a Tailwind class on <html>. `scroll-snap-type`
+   must sit on the SCROLL CONTAINER and the document is the scroller; the `snap-y`
+   utility was not being emitted for the root element, so the property silently
+   computed to `none`.
+
+   ⚠️ The carousels' own `snap-start` items are NOT affected. A snap area belongs to
+   its nearest ancestor scroll container, which for those is the carousel's own
+   horizontal scroller, not the document.
+
+   ⚠️ Snap points and `position: sticky` are a known source of jank in Chrome and this
+   page has several sticky elements. If scrolling ever feels notchy through Services,
+   this rule is the first thing to remove. */
+html { scroll-snap-type: y proximity; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* The expansion it rests at does not exist under reduced motion — the pin never
+     mounts — so there is nothing to snap to. */
+  html { scroll-snap-type: none; }
+}
+
+/* Anchored sections stop BELOW the fixed nav rather than under it. Without this
+   every nav link lands with its heading hidden behind the bar — the section is
+   technically at the top of the viewport, which is the problem. 6rem clears the
+   floating bar (~70px) with air to spare. */
+section[id],
+footer[id] { scroll-margin-top: 6rem; }
+body { min-height: 100vh; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+img, picture, video, canvas, svg { display: block; max-width: 100%; }
+input, button, textarea, select { font: inherit; color: inherit; }
+button { background: none; border: 0; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, h4, h5, h6, p { overflow-wrap: break-word; }
+/* Never leave a single-word orphan on the last line of body copy or quotes. */
+p, blockquote { text-wrap: pretty; }
+
+/* NOTE: v1 hid the native cursor here (`cursor: none`) because a CustomCursor
+   component replaced it. v2 does not mount CustomCursor — whether it returns at all
+   is a D6 decision — so hiding the cursor would leave no cursor at all.
+   If CustomCursor is reinstated, restore this rule IN THE SAME CHANGE:
+
+   @media (pointer: fine) and (prefers-reduced-motion: no-preference) {
+     html, html * { cursor: none !important; }
+   }
+*/
+
+/* ============================================================================
+   KEYFRAMES Tailwind can't express (seeded — full choreography in Deliverable 6)
+   ========================================================================== */
+
+/* Scroll-reveal: fade + rise */
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* CTA arrow loop: a 2-arrow track slides left by one slot, seamlessly.
+   The icon window clips it, so it reads as one arrow exiting right while the
+   next enters from the left, continuously. */
+@keyframes arrow-loop {
+  from { transform: translateX(-40px); }
+  to   { transform: translateX(0); }
+}
+
+/* Continuous downward arrow loop — hero scroll cue */
+@keyframes arrow-loop-down {
+  from { transform: translateY(-40px); }
+  to   { transform: translateY(0); }
+}
+
+/* CTA circle-expand: a clip-path circle reveals the fill outward from the
+   circle's position (24px from the right edge). The visible radius IS the
+   animation, so growth is fully visible at any button width.
+   Spring in (slower per feedback, slight overshoot); softer out. */
+.cta-fill {
+  clip-path: circle(0% at calc(100% - 24px) 50%);
+  transition: clip-path 640ms cubic-bezier(0.22, 1, 0.36, 1); /* retract: softer */
+  pointer-events: none;
+}
+.group:hover .cta-fill {
+  clip-path: circle(150% at calc(100% - 24px) 50%);
+  transition-duration: 900ms;                        /* expand: slowed down */
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Tighten the wide monospace word gap inside heading highlights */
+.heading-highlight {
+  word-spacing: -0.32em;
+}
+
+/* Card hover-reveal falls back to always-visible on touch (no-hover) devices,
+   so the scrim + copy are never hidden where there's no hover to trigger them. */
+@media (hover: none) {
+  .card-scrim { opacity: 1; }
+  .card-copy { opacity: 1; transform: none; }
+}
+
+/* Hide scrollbar on carousels (still scrollable/swipeable) */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Hero video blend. Two declarations on purpose, not a mistake: `plus-darker`
+   (linear burn — what the design asks for) is Safari-only at time of writing, so
+   `multiply` sits underneath as the fallback any browser will honour. Browsers
+   that understand the second declaration use it; the rest keep the first.
+   Tailwind has no `plus-darker` utility and arbitrary values are banned (§6),
+   so this is one of the "few things Tailwind can't express". */
+.blend-plus-darker {
+  mix-blend-mode: multiply;
+  mix-blend-mode: plus-darker;
+}
+
+/* Process step circles drifting in place. Four points on a shallow arc rather than
+   a straight up-down, so the motion reads as floating rather than bouncing. The
+   x drift is deliberately smaller than the y — equal amounts read as a circular
+   orbit, which looks mechanical.
+
+   Amplitudes stay under the connectors' 22px tuck, so the lines never come out
+   from behind a circle as it moves. See MOTION_SPEC.md. */
+@keyframes step-float {
+  0%,
+  100% { transform: translate3d(0, 0, 0); }
+  25%  { transform: translate3d(5px, -8px, 0); }
+  50%  { transform: translate3d(0, -12px, 0); }
+  75%  { transform: translate3d(-5px, -7px, 0); }
+}
+
+/* Text caret for the Hero's rotating accent word. Holds solid longer than it
+   holds hidden — a 50/50 blink reads as a strobe at this size. See MOTION_SPEC. */
+@keyframes caret-blink {
+  0%, 45%   { opacity: 1; }
+  55%, 100% { opacity: 0; }
+}
+
+/* Gentle pulse for nav links on hover */
+@keyframes link-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.14); }
+}
+
+/* Subtler pulse for the large heading highlight pills on hover */
+@keyframes pill-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Quiz — the incoming screen. Two directions, so a screen always arrives from the
+   side the previous one did NOT leave towards; without the pair, going Back reads
+   as another step forward.
+
+   ⚠️ These are ANIMATIONS rather than transitions on purpose. A transition needs
+   the element painted in a start state and then changed, which from React means
+   scheduling the change in a requestAnimationFrame — and rAF does not fire in a
+   backgrounded tab, so the panel can be left permanently at opacity 0. An
+   animation runs on mount, full stop. Learned the hard way, 13 Aug.
+
+   The 28px matches `2xl`, the same distance the outgoing screen travels. */
+@keyframes step-in-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes step-in-down {
+  from { opacity: 0; transform: translateY(-28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Mobile menu — the panel itself, and each row inside it arriving after it.
+
+   An ANIMATION rather than a transition, for the reason that has now bitten this
+   codebase three times: the menu is toggled between `hidden` and `flex`, so its
+   children mount rather than change state, and there is nothing for a transition
+   to run FROM. Animations play on mount unconditionally.
+
+   The per-row delay is set inline from the item's index — see `Nav`. The global
+   reduced-motion block at the foot of this file collapses both to ~0ms, which is
+   the right degradation: the menu still appears, it just does not travel. */
+@keyframes menu-panel-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes menu-row-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================================
+   REDUCED MOTION — colour changes may remain; motion is neutralised
+   ========================================================================== */
+/* CLAUDE.md §5: "colour changes may remain; expansions, loops and scroll reveals
+   must not." The usual blanket snippet sets EVERY transition to 0.001ms, which
+   also kills colour — a reduced-motion user then gets hover states that snap
+   between colours, which reads as broken rather than as calm.
+
+   So this restricts transition-property to colour and opacity instead. Transform,
+   size and flex are no longer listed, so they snap and expansions genuinely do not
+   animate, while colour still eases. box-shadow is included so the FOCUS RING
+   still animates — it is the one piece of feedback a keyboard user cannot do
+   without. Keyframes and smooth scrolling are killed outright.
+
+   Full rationale in MOTION_SPEC.md §7.2. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-property: color, background-color, border-color, fill, stroke,
+                         opacity, box-shadow !important;
+    transition-duration: 150ms !important;
+  }
+}

@@ -1,0 +1,169 @@
+import { cn } from "@/lib/cn";
+
+/**
+ * Logo — the Otix Studio lockup: four diamonds + the wordmark.
+ * Source: `Supplied Files/otix-studio-logo.svg` (139x24, updated 12 Aug).
+ *
+ * Inlined rather than <img> so the colours are tokenisable. The supplied file
+ * hard-codes #98C3B1 on the diamonds and white on the wordmark; both become
+ * `currentColor` here so the lockup flips per surface via `markClass` / `textClass`.
+ *
+ * The wordmark is OUTLINED VECTOR, not live text - it is a lockup and sits outside
+ * the type system deliberately (COMPONENTS.md section 1).
+ */
+
+export type LogoVariant = "nav" | "footer" | "mark";
+
+export interface LogoProps {
+  variant?: LogoVariant;
+  /** Wrap in a link. Omit to render the mark alone (e.g. decorative in the footer). */
+  href?: string;
+  /** Diamond colour. Defaults to the brand green-300. */
+  markClass?: string;
+  /** Wordmark colour. Defaults to white (both nav and footer sit on dark). */
+  textClass?: string;
+  /**
+   * `mark` variant only: strokes the diamonds with a light-to-dark gradient instead
+   * of a flat colour, and COUNTER-ROTATES it by this many degrees.
+   *
+   * ⚠️ The counter-rotation is the whole idea. A gradient baked into the shape turns
+   * with it, which reads as a printed graphic spinning. Cancelling the parent's
+   * rotation holds the highlight still in the world while the form turns through it
+   * — that is what reads as a solid object catching light rather than a flat one
+   * being rotated.
+   *
+   * Pass the same value the parent is rotating by, negated for you here. Omit it and
+   * the mark strokes flat, as the nav and footer lockups do.
+   */
+  sheen?: number;
+  className?: string;
+}
+
+/** Fluid - the SVG scales to its container. Never a fixed px width (CLAUDE.md section 0). */
+const SIZE: Record<LogoVariant, string> = {
+  nav: "h-icon w-auto",
+  footer: "h-auto w-full",
+  mark: "size-full",
+};
+
+/**
+ * The four diamonds alone, cropped square.
+ *
+ * ⚠️ These numbers are DERIVED from the four `<rect>`s below, not eyeballed. Each is
+ * a 5.5088 square rotated 45 about its own top-left corner, which puts the group's
+ * real bounds at x 0.801..22.153, y 1.325..22.677 — a 21.352 square centred on
+ * (11.477, 12.001). Cropping to exactly that is what lets the mark rotate about its
+ * own centre without wobbling, which the full 139x24 lockup viewBox cannot do.
+ *
+ * ⚠️ THE BOX IS PADDED BY ONE UNIT ON EVERY SIDE, AND THAT PADDING IS NOT OPTIONAL.
+ * `stroke` is painted CENTRED on the path, so half the 1.8768 stroke width — 0.9384
+ * — lies outside the geometric bounds above. Cropped to the bounds exactly, an SVG
+ * viewport clips that half away and the outermost corner of each diamond arrives
+ * flat. It is invisible at nav size and unmissable at 720px, where the same 0.94
+ * units scale to roughly 32 real pixels.
+ *
+ * So: bounds 0.801..22.153 padded to -0.199..23.153, a 23.352 square still centred
+ * on (11.477, 12.001). **If the stroke width ever changes, this padding changes.**
+ */
+const MARK_VIEWBOX = "-0.199 0.325 23.352 23.352";
+
+export function Logo({
+  variant = "nav",
+  href,
+  markClass = "text-green-300",
+  textClass = "text-neutral-0",
+  sheen,
+  className,
+}: LogoProps) {
+  const isMark = variant === "mark";
+  const hasSheen = isMark && sheen !== undefined;
+
+  const svg = (
+    <svg
+      viewBox={isMark ? MARK_VIEWBOX : "0 0 139 24"}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      /* ⚠️ The `mark` variant is DECORATION and is announced as nothing. It exists to
+         be an oversized watermark; naming it "Otix Studio" would put the brand into
+         the accessibility tree a second time on a page that already has the lockup
+         in the nav and the footer. */
+      role={isMark ? undefined : "img"}
+      aria-label={isMark ? undefined : "Otix Studio"}
+      aria-hidden={isMark ? true : undefined}
+      className={cn(SIZE[variant], className)}
+    >
+      {hasSheen ? (
+        <defs>
+          {/*
+            ⚠️ `gradientUnits="userSpaceOnUse"` and an explicit vector, NOT the
+            default `objectBoundingBox`. Each `<rect>` here is its own tiny bounding
+            box, so the default would restart the gradient inside every diamond and
+            all four would look identical — the sheen has to span the WHOLE mark to
+            read as one lit object.
+
+            ⚠️ The stops run bright → mid → dark rather than bright → transparent.
+            Transparent stops made the far side of the mark disappear instead of
+            turning away from the light, which reads as a broken shape.
+          */}
+          <linearGradient
+            id="otix-mark-sheen"
+            gradientUnits="userSpaceOnUse"
+            x1="0.801"
+            y1="1.325"
+            x2="22.153"
+            y2="22.677"
+            gradientTransform={`rotate(${-(sheen ?? 0)} 11.477 12.001)`}
+          >
+            {/*
+              ⚠️ FIVE STOPS WITH A NARROW BRIGHT BAND, not a broad light-to-dark ramp.
+              This is the whole difference between dull and polished: a wide ramp
+              reads as a flat shape that happens to be shaded, while a tight specular
+              band reads as a hard surface catching a light source. It is also what
+              makes the counter-rotation worth having — the band travels across the
+              diamonds as the wheel turns, so you get a glint rather than a gradient.
+
+              Symmetric about the highlight so the form falls away evenly on both
+              sides. The ends are `green-800` rather than transparent: fading out made
+              the far side of the mark disappear instead of turning away from the
+              light.
+            */}
+            <stop offset="0%" stopColor="#1D3A2E" />
+            <stop offset="38%" stopColor="#407760" />
+            <stop offset="50%" stopColor="#F3F6F5" />
+            <stop offset="62%" stopColor="#407760" />
+            <stop offset="100%" stopColor="#1D3A2E" />
+          </linearGradient>
+        </defs>
+      ) : null}
+
+      <g
+        className={hasSheen ? undefined : markClass}
+        stroke={hasSheen ? "url(#otix-mark-sheen)" : "currentColor"}
+        strokeWidth="1.8768"
+      >
+        <rect x="11.4771" y="1.32469" width="5.5088" height="5.5088" rx="0.3296" transform="rotate(45 11.4771 1.32469)" />
+        <rect x="4.69714" y="8.10469" width="5.5088" height="5.5088" rx="0.3296" transform="rotate(45 4.69714 8.10469)" />
+        <rect x="18.2571" y="8.10469" width="5.5088" height="5.5088" rx="0.3296" transform="rotate(45 18.2571 8.10469)" />
+        <rect x="11.4771" y="14.8847" width="5.5088" height="5.5088" rx="0.3296" transform="rotate(45 11.4771 14.8847)" />
+      </g>
+      {isMark ? null : (
+      <g className={textClass} fill="currentColor">
+        <path d="M34.0193 21.36C32.7233 21.36 31.5913 21.068 30.6233 20.484C29.6553 19.9 28.9033 19.096 28.3673 18.072C27.8393 17.04 27.5753 15.856 27.5753 14.52C27.5753 13.16 27.8473 11.968 28.3913 10.944C28.9353 9.92 29.6913 9.12 30.6593 8.544C31.6273 7.968 32.7473 7.68 34.0193 7.68C35.3233 7.68 36.4593 7.972 37.4273 8.556C38.3953 9.14 39.1473 9.948 39.6833 10.98C40.2193 12.004 40.4873 13.184 40.4873 14.52C40.4873 15.864 40.2153 17.052 39.6713 18.084C39.1353 19.108 38.3833 19.912 37.4153 20.496C36.4473 21.072 35.3153 21.36 34.0193 21.36ZM34.0193 18.648C35.1713 18.648 36.0273 18.264 36.5873 17.496C37.1473 16.728 37.4273 15.736 37.4273 14.52C37.4273 13.264 37.1433 12.264 36.5753 11.52C36.0073 10.768 35.1553 10.392 34.0193 10.392C33.2433 10.392 32.6033 10.568 32.0993 10.92C31.6033 11.264 31.2353 11.748 30.9953 12.372C30.7553 12.988 30.6353 13.704 30.6353 14.52C30.6353 15.776 30.9193 16.78 31.4873 17.532C32.0633 18.276 32.9073 18.648 34.0193 18.648ZM50.0072 21C49.1512 21.16 48.3112 21.228 47.4872 21.204C46.6712 21.188 45.9392 21.04 45.2912 20.76C44.6432 20.472 44.1512 20.02 43.8152 19.404C43.5192 18.844 43.3632 18.272 43.3472 17.688C43.3312 17.104 43.3232 16.444 43.3232 15.708V4.44H46.2032V15.54C46.2032 16.06 46.2072 16.516 46.2152 16.908C46.2312 17.3 46.3152 17.62 46.4672 17.868C46.7552 18.348 47.2152 18.616 47.8472 18.672C48.4792 18.728 49.1992 18.696 50.0072 18.576V21ZM40.9712 10.308V8.04H50.0072V10.308H40.9712ZM52.314 6.072V3.42H55.206V6.072H52.314ZM52.314 21V8.04H55.206V21H52.314ZM56.6406 21L61.3806 14.448L56.7366 8.04H60.1446L63.0606 12.18L65.9286 8.04H69.3366L64.6926 14.448L69.4566 21H66.0486L63.0606 16.716L60.0486 21H56.6406Z" />
+        <path d="M77.7185 21.348C76.1985 21.348 74.9465 21.02 73.9625 20.364C72.9865 19.708 72.3865 18.796 72.1625 17.628L73.9625 17.328C74.1545 18.064 74.5905 18.652 75.2705 19.092C75.9585 19.524 76.8065 19.74 77.8145 19.74C78.7985 19.74 79.5745 19.536 80.1425 19.128C80.7105 18.712 80.9945 18.148 80.9945 17.436C80.9945 17.036 80.9025 16.712 80.7185 16.464C80.5425 16.208 80.1785 15.972 79.6265 15.756C79.0745 15.54 78.2505 15.284 77.1545 14.988C75.9785 14.668 75.0585 14.348 74.3945 14.028C73.7305 13.708 73.2585 13.34 72.9785 12.924C72.6985 12.5 72.5585 11.984 72.5585 11.376C72.5585 10.64 72.7665 9.996 73.1825 9.444C73.5985 8.884 74.1745 8.452 74.9105 8.148C75.6465 7.836 76.5025 7.68 77.4785 7.68C78.4545 7.68 79.3265 7.84 80.0945 8.16C80.8705 8.472 81.4945 8.912 81.9665 9.48C82.4385 10.048 82.7185 10.708 82.8065 11.46L81.0065 11.784C80.8865 11.024 80.5065 10.424 79.8665 9.984C79.2345 9.536 78.4305 9.304 77.4545 9.288C76.5345 9.264 75.7865 9.44 75.2105 9.816C74.6345 10.184 74.3465 10.676 74.3465 11.292C74.3465 11.636 74.4505 11.932 74.6585 12.18C74.8665 12.42 75.2425 12.648 75.7865 12.864C76.3385 13.08 77.1225 13.316 78.1385 13.572C79.3305 13.876 80.2665 14.196 80.9465 14.532C81.6265 14.868 82.1105 15.264 82.3985 15.72C82.6865 16.176 82.8305 16.74 82.8305 17.412C82.8305 18.636 82.3745 19.6 81.4625 20.304C80.5585 21 79.3105 21.348 77.7185 21.348ZM91.8278 21C91.0998 21.152 90.3798 21.212 89.6678 21.18C88.9638 21.148 88.3318 20.996 87.7718 20.724C87.2198 20.452 86.7998 20.028 86.5118 19.452C86.2798 18.972 86.1518 18.488 86.1278 18C86.1118 17.504 86.1038 16.94 86.1038 16.308V4.44H87.8558V16.236C87.8558 16.78 87.8598 17.236 87.8678 17.604C87.8838 17.964 87.9678 18.284 88.1198 18.564C88.4078 19.1 88.8638 19.42 89.4878 19.524C90.1198 19.628 90.8998 19.604 91.8278 19.452V21ZM83.3318 9.552V8.04H91.8278V9.552H83.3318ZM98.6172 21.324C97.8412 21.324 97.1612 21.204 96.5772 20.964C96.0012 20.724 95.5092 20.4 95.1012 19.992C94.7012 19.584 94.3772 19.12 94.1292 18.6C93.8812 18.072 93.7012 17.516 93.5892 16.932C93.4772 16.34 93.4212 15.752 93.4212 15.168V8.04H95.1972V14.652C95.1972 15.364 95.2652 16.024 95.4012 16.632C95.5372 17.24 95.7532 17.772 96.0492 18.228C96.3532 18.676 96.7412 19.024 97.2132 19.272C97.6932 19.52 98.2732 19.644 98.9532 19.644C99.5772 19.644 100.125 19.536 100.597 19.32C101.077 19.104 101.477 18.796 101.797 18.396C102.125 17.988 102.373 17.496 102.541 16.92C102.709 16.336 102.793 15.68 102.793 14.952L104.041 15.228C104.041 16.556 103.809 17.672 103.345 18.576C102.881 19.48 102.241 20.164 101.425 20.628C100.609 21.092 99.6732 21.324 98.6172 21.324ZM102.973 21V17.808H102.793V8.04H104.557V21H102.973ZM112.219 21.36C111.011 21.36 109.979 21.06 109.123 20.46C108.267 19.852 107.611 19.032 107.155 18C106.699 16.968 106.471 15.804 106.471 14.508C106.471 13.22 106.695 12.06 107.143 11.028C107.599 9.996 108.251 9.18 109.099 8.58C109.947 7.98 110.963 7.68 112.147 7.68C113.363 7.68 114.387 7.976 115.219 8.568C116.051 9.16 116.679 9.972 117.103 11.004C117.535 12.028 117.751 13.196 117.751 14.508C117.751 15.796 117.539 16.96 117.115 18C116.691 19.032 116.067 19.852 115.243 20.46C114.419 21.06 113.411 21.36 112.219 21.36ZM112.399 19.716C113.319 19.716 114.079 19.492 114.679 19.044C115.279 18.596 115.727 17.98 116.023 17.196C116.319 16.404 116.467 15.508 116.467 14.508C116.467 13.492 116.319 12.596 116.023 11.82C115.727 11.036 115.279 10.424 114.679 9.984C114.087 9.544 113.339 9.324 112.435 9.324C111.507 9.324 110.739 9.552 110.131 10.008C109.523 10.464 109.071 11.084 108.775 11.868C108.487 12.652 108.343 13.532 108.343 14.508C108.343 15.492 108.491 16.38 108.787 17.172C109.091 17.956 109.543 18.576 110.143 19.032C110.743 19.488 111.495 19.716 112.399 19.716ZM116.467 21V11.244H116.275V3.72H118.051V21H116.467ZM120.938 5.58V3.6H122.702V5.58H120.938ZM120.938 21V8.04H122.702V21H120.938ZM130.991 21.36C129.703 21.36 128.603 21.068 127.691 20.484C126.779 19.9 126.079 19.092 125.591 18.06C125.103 17.028 124.859 15.844 124.859 14.508C124.859 13.148 125.107 11.956 125.603 10.932C126.099 9.908 126.803 9.112 127.715 8.544C128.635 7.968 129.727 7.68 130.991 7.68C132.287 7.68 133.391 7.972 134.303 8.556C135.223 9.132 135.923 9.936 136.403 10.968C136.891 11.992 137.135 13.172 137.135 14.508C137.135 15.868 136.891 17.064 136.403 18.096C135.915 19.12 135.211 19.92 134.291 20.496C133.371 21.072 132.271 21.36 130.991 21.36ZM130.991 19.668C132.431 19.668 133.503 19.192 134.207 18.24C134.911 17.28 135.263 16.036 135.263 14.508C135.263 12.94 134.907 11.692 134.195 10.764C133.491 9.836 132.423 9.372 130.991 9.372C130.023 9.372 129.223 9.592 128.591 10.032C127.967 10.464 127.499 11.068 127.187 11.844C126.883 12.612 126.731 13.5 126.731 14.508C126.731 16.068 127.091 17.32 127.811 18.264C128.531 19.2 129.591 19.668 130.991 19.668Z" />
+      </g>
+      )}
+    </svg>
+  );
+
+  if (!href) return svg;
+
+  return (
+    <a
+      href={href}
+      aria-label="Otix Studio - home"
+      className="inline-flex min-h-tap items-center rounded-sm transition-opacity duration-base ease-smooth hover:opacity-80 focus-visible:shadow-focus"
+    >
+      {svg}
+    </a>
+  );
+}
