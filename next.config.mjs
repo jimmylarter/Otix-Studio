@@ -1,10 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
-  basePath: '/Otix-Studio',
-  images: {
-    unoptimized: true,
-  },
+  reactStrictMode: true,
 };
 
 export default nextConfig;
